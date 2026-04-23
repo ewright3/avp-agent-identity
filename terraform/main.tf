@@ -52,133 +52,171 @@ resource "aws_verifiedpermissions_schema" "main" {
   }
 }
 
-# --- Chatbot agent policies ---
+# ---------------------------------------------------------------------------
+# Chatbot agent policies
+#
+# The agent can read orders only when a valid customer session is present.
+# context.session_customer_id is passed by the app server — not the client.
+# The app then filters the SQL query to WHERE customer_id = session_customer_id.
+# The Cedar policy validates the agent is operating within a customer session.
+# ---------------------------------------------------------------------------
 
-resource "aws_verifiedpermissions_policy" "chatbot_cases_readwrite" {
+resource "aws_verifiedpermissions_policy" "chatbot_orders_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "Chatbot agent: read and write support cases"
-      statement   = <<-CEDAR
-        permit(
-          principal == AgentIdentity::Agent::"chatbot-support",
-          action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
-          resource == AgentIdentity::DataStore::"cases"
-        );
-      CEDAR
-    }
-  }
-}
-
-resource "aws_verifiedpermissions_policy" "chatbot_availability_read" {
-  policy_store_id = aws_verifiedpermissions_policy_store.main.id
-
-  definition {
-    static {
-      description = "Chatbot agent: read availability events"
+      description = "Chatbot agent: read orders within an authenticated customer session"
       statement   = <<-CEDAR
         permit(
           principal == AgentIdentity::Agent::"chatbot-support",
           action == AgentIdentity::Action::"read",
-          resource == AgentIdentity::DataStore::"availability"
-        );
+          resource == AgentIdentity::DataStore::"orders"
+        )
+        when { context has session_customer_id };
       CEDAR
     }
   }
 }
 
-# --- Explicit deny: chatbot cannot reach investigations or customers ---
-
-resource "aws_verifiedpermissions_policy" "chatbot_investigations_deny" {
+# Explicit deny: chatbot cannot access payments under any circumstance
+resource "aws_verifiedpermissions_policy" "chatbot_payments_deny" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "Chatbot agent: explicitly forbidden from investigations"
+      description = "Chatbot agent: explicitly forbidden from payment records"
       statement   = <<-CEDAR
         forbid(
           principal == AgentIdentity::Agent::"chatbot-support",
           action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
-          resource == AgentIdentity::DataStore::"investigations"
+          resource == AgentIdentity::DataStore::"payments"
         );
       CEDAR
     }
   }
 }
 
-resource "aws_verifiedpermissions_policy" "chatbot_customers_deny" {
+# Explicit deny: chatbot cannot access system logs
+resource "aws_verifiedpermissions_policy" "chatbot_logs_deny" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "Chatbot agent: explicitly forbidden from customer records"
+      description = "Chatbot agent: explicitly forbidden from system logs"
       statement   = <<-CEDAR
         forbid(
           principal == AgentIdentity::Agent::"chatbot-support",
           action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
-          resource == AgentIdentity::DataStore::"customers"
+          resource == AgentIdentity::DataStore::"system_logs"
         );
       CEDAR
     }
   }
 }
 
-# --- Permission ceiling: no agent principal can ever access investigations ---
+# ---------------------------------------------------------------------------
+# Permission ceiling
+#
+# No agent principal — regardless of how a developer configures it —
+# can ever access payment records. A permit policy for an agent on payments
+# will always be overridden by this forbid.
+#
+# This is the control plane claim: SecOps defines the ceiling,
+# developers cannot exceed it.
+# ---------------------------------------------------------------------------
 
-resource "aws_verifiedpermissions_policy" "agent_ceiling_investigations" {
+resource "aws_verifiedpermissions_policy" "agent_ceiling_payments" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "Ceiling policy: no agent identity may access investigations regardless of configuration"
+      description = "Ceiling policy: no agent identity may access payment records regardless of configuration"
       statement   = <<-CEDAR
         forbid(
           principal in AgentIdentity::Agent::"*",
           action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
-          resource == AgentIdentity::DataStore::"investigations"
+          resource == AgentIdentity::DataStore::"payments"
         );
       CEDAR
     }
   }
 }
 
-# --- SecOps policies ---
+# ---------------------------------------------------------------------------
+# Developer (standard) policies
+# Read access to orders and system logs. No access to payments.
+# ---------------------------------------------------------------------------
 
-resource "aws_verifiedpermissions_policy" "secops_cases_read" {
+resource "aws_verifiedpermissions_policy" "developer_orders_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "SecOps users: read support cases"
+      description = "Developer (standard): read all orders"
       statement   = <<-CEDAR
         permit(
-          principal == AgentIdentity::User::"secops",
+          principal == AgentIdentity::User::"developer",
           action == AgentIdentity::Action::"read",
-          resource in [
-            AgentIdentity::DataStore::"cases",
-            AgentIdentity::DataStore::"availability"
-          ]
+          resource == AgentIdentity::DataStore::"orders"
         );
       CEDAR
     }
   }
 }
 
-resource "aws_verifiedpermissions_policy" "secops_investigations_jit" {
+resource "aws_verifiedpermissions_policy" "developer_logs_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
     static {
-      description = "SecOps users: time-bound JIT access to investigations and customer records"
+      description = "Developer (standard): read system logs"
       statement   = <<-CEDAR
         permit(
-          principal == AgentIdentity::User::"secops",
+          principal == AgentIdentity::User::"developer",
           action == AgentIdentity::Action::"read",
-          resource in [
-            AgentIdentity::DataStore::"investigations",
-            AgentIdentity::DataStore::"customers"
-          ]
+          resource == AgentIdentity::DataStore::"system_logs"
+        );
+      CEDAR
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Developer (elevated) policies
+# JIT access to payments and write access to orders.
+# Elevation is a context attribute passed by the app server.
+# ---------------------------------------------------------------------------
+
+resource "aws_verifiedpermissions_policy" "developer_orders_write_elevated" {
+  policy_store_id = aws_verifiedpermissions_policy_store.main.id
+
+  definition {
+    static {
+      description = "Developer (elevated): read and write all orders"
+      statement   = <<-CEDAR
+        permit(
+          principal == AgentIdentity::User::"developer",
+          action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
+          resource == AgentIdentity::DataStore::"orders"
+        )
+        when { context.elevation_active == true };
+      CEDAR
+    }
+  }
+}
+
+resource "aws_verifiedpermissions_policy" "developer_payments_elevated" {
+  policy_store_id = aws_verifiedpermissions_policy_store.main.id
+
+  definition {
+    static {
+      description = "Developer (elevated): read payment records — JIT only"
+      statement   = <<-CEDAR
+        permit(
+          principal == AgentIdentity::User::"developer",
+          action == AgentIdentity::Action::"read",
+          resource == AgentIdentity::DataStore::"payments"
         )
         when { context.elevation_active == true };
       CEDAR

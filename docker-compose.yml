@@ -6,85 +6,70 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # BWS bootstrap — the only credentials this service needs at startup.
-      # All application secrets (API keys, DB passwords) are fetched from BWS.
       - BWS_ACCESS_TOKEN=${CHATBOT_BWS_TOKEN}
       - BWS_ORGANIZATION_ID=${BWS_ORGANIZATION_ID}
-      # Infrastructure config
       - AVP_POLICY_STORE_ID=${AVP_POLICY_STORE_ID}
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     depends_on:
-      - db-cases
-      - db-availability
+      - db-orders
     networks:
       - app-net
 
-  # SecOps internal portal
-  secops:
-    build: ./secops
+  # Developer portal — demonstrates standard and elevated developer access
+  developer:
+    build: ./developer
     ports:
       - "8001:8001"
     environment:
-      - BWS_ACCESS_TOKEN=${SECOPS_BWS_TOKEN}
+      - BWS_ACCESS_TOKEN=${DEVELOPER_BWS_TOKEN}
       - BWS_ORGANIZATION_ID=${BWS_ORGANIZATION_ID}
       - AVP_POLICY_STORE_ID=${AVP_POLICY_STORE_ID}
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     depends_on:
-      - db-cases
-      - db-availability
-      - db-investigations
-      - db-customers
+      - db-orders
+      - db-payments
+      - db-logs
     networks:
       - app-net
 
-  # Data store: support cases (chatbot can read/write)
-  # Postgres password is stored in BWS and fetched by the app services at startup.
-  # The POSTGRES_PASSWORD here must match the value stored in BWS under DB_CASES_PASSWORD.
-  db-cases:
+  # Orders — chatbot (own customer only) and developer (all) can read
+  # Postgres password must match DB_ORDERS_PASSWORD stored in BWS
+  db-orders:
     image: postgres:16
     environment:
-      POSTGRES_DB: cases
+      POSTGRES_DB: orders
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${DB_CASES_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_ORDERS_PASSWORD}
     volumes:
-      - ./postgres/init/cases.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres/init/orders.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-net
 
-  db-availability:
+  # Payments — developer elevated only; chatbot has no access (AVP ceiling)
+  db-payments:
     image: postgres:16
     environment:
-      POSTGRES_DB: availability
+      POSTGRES_DB: payments
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${DB_AVAILABILITY_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PAYMENTS_PASSWORD}
     volumes:
-      - ./postgres/init/availability.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres/init/payments.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-net
 
-  db-investigations:
+  # System logs — developer standard and elevated; chatbot has no access
+  db-logs:
     image: postgres:16
     environment:
-      POSTGRES_DB: investigations
+      POSTGRES_DB: system_logs
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${DB_INVESTIGATIONS_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_LOGS_PASSWORD}
     volumes:
-      - ./postgres/init/investigations.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - app-net
-
-  db-customers:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: customers
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${DB_CUSTOMERS_PASSWORD}
-    volumes:
-      - ./postgres/init/customers.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres/init/system_logs.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-net
 
