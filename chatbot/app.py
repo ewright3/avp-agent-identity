@@ -20,17 +20,24 @@ import boto3
 import psycopg2
 import chainlit as cl
 from anthropic import Anthropic
+from secrets import load_secrets
 
 # ---------------------------------------------------------------------------
-# Secrets: loaded from BWS machine account at startup
-# In production this would use the BWS SDK to fetch secrets by key.
-# For demo clarity we read from environment variables injected by BWS.
+# Secrets: fetched from BWS at startup using the machine account token.
+# BWS_ACCESS_TOKEN and BWS_ORGANIZATION_ID come from the environment.
+# Everything else (API keys, DB passwords) comes from BWS.
+# The developer's personal BWS token is a user-level env var and is never
+# visible to this process.
 # ---------------------------------------------------------------------------
-ANTHROPIC_API_KEY     = os.environ["ANTHROPIC_API_KEY"]
-DB_CASES_PASSWORD     = os.environ["DB_CASES_PASSWORD"]
-DB_AVAILABILITY_PASSWORD = os.environ["DB_AVAILABILITY_PASSWORD"]
-AVP_POLICY_STORE_ID   = os.environ["AVP_POLICY_STORE_ID"]
-AWS_REGION            = os.environ.get("AWS_REGION", "us-east-1")
+_secrets = load_secrets()
+
+ANTHROPIC_API_KEY        = _secrets["ANTHROPIC_API_KEY"]
+DB_CASES_PASSWORD        = _secrets["DB_CASES_PASSWORD"]
+DB_AVAILABILITY_PASSWORD = _secrets["DB_AVAILABILITY_PASSWORD"]
+
+# Infrastructure config — not application secrets, stays in env
+AVP_POLICY_STORE_ID = os.environ["AVP_POLICY_STORE_ID"]
+AWS_REGION          = os.environ.get("AWS_REGION", "us-east-1")
 
 # This agent's principal identifier in Cedar policies
 AGENT_PRINCIPAL = "AgentIdentity::Agent::\"chatbot-support\""

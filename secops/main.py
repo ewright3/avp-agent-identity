@@ -13,14 +13,18 @@ import json
 import boto3
 import psycopg2
 from fastapi import FastAPI, HTTPException, Header
-from pydantic import BaseModel
+from secrets import load_secrets
 
-AVP_POLICY_STORE_ID      = os.environ["AVP_POLICY_STORE_ID"]
-AWS_REGION               = os.environ.get("AWS_REGION", "us-east-1")
-DB_CASES_PASSWORD        = os.environ["DB_CASES_PASSWORD"]
-DB_AVAILABILITY_PASSWORD = os.environ["DB_AVAILABILITY_PASSWORD"]
-DB_INVESTIGATIONS_PASSWORD = os.environ["DB_INVESTIGATIONS_PASSWORD"]
-DB_CUSTOMERS_PASSWORD    = os.environ["DB_CUSTOMERS_PASSWORD"]
+_secrets = load_secrets()
+
+DB_CASES_PASSWORD          = _secrets["DB_CASES_PASSWORD"]
+DB_AVAILABILITY_PASSWORD   = _secrets["DB_AVAILABILITY_PASSWORD"]
+DB_INVESTIGATIONS_PASSWORD = _secrets["DB_INVESTIGATIONS_PASSWORD"]
+DB_CUSTOMERS_PASSWORD      = _secrets["DB_CUSTOMERS_PASSWORD"]
+
+# Infrastructure config — stays in env
+AVP_POLICY_STORE_ID = os.environ["AVP_POLICY_STORE_ID"]
+AWS_REGION          = os.environ.get("AWS_REGION", "us-east-1")
 
 avp_client = boto3.client("verifiedpermissions", region_name=AWS_REGION)
 app = FastAPI(title="SecOps Internal API")
