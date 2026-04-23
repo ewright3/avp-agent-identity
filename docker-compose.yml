@@ -1,0 +1,89 @@
+services:
+
+  # Customer-facing chatbot (Chainlit + Claude API)
+  chatbot:
+    build: ./chatbot
+    ports:
+      - "8000:8000"
+    environment:
+      - BWS_ACCESS_TOKEN=${CHATBOT_BWS_TOKEN}
+      - AVP_POLICY_STORE_ID=${AVP_POLICY_STORE_ID}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      - db-cases
+      - db-availability
+    networks:
+      - app-net
+
+  # SecOps internal portal
+  secops:
+    build: ./secops
+    ports:
+      - "8001:8001"
+    environment:
+      - BWS_ACCESS_TOKEN=${SECOPS_BWS_TOKEN}
+      - AVP_POLICY_STORE_ID=${AVP_POLICY_STORE_ID}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    depends_on:
+      - db-cases
+      - db-availability
+      - db-investigations
+      - db-customers
+    networks:
+      - app-net
+
+  # Data store: support cases (chatbot can read/write)
+  db-cases:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: cases
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_CASES_PASSWORD}
+    volumes:
+      - ./postgres/init/cases.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+
+  # Data store: service availability events (chatbot can read)
+  db-availability:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: availability
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_AVAILABILITY_PASSWORD}
+    volumes:
+      - ./postgres/init/availability.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+
+  # Data store: security investigations (SecOps JIT only — chatbot has no access)
+  db-investigations:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: investigations
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_INVESTIGATIONS_PASSWORD}
+    volumes:
+      - ./postgres/init/investigations.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+
+  # Data store: full customer records + PII (SecOps JIT only — chatbot has no access)
+  db-customers:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: customers
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_CUSTOMERS_PASSWORD}
+    volumes:
+      - ./postgres/init/customers.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
