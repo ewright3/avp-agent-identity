@@ -264,7 +264,56 @@ resource "aws_verifiedpermissions_policy" "developer_payments_elevated" {
   }
 }
 
+# ---------------------------------------------------------------------------
+# IAM user for AVP authorization calls
+#
+# Least-privilege: only verifiedpermissions:IsAuthorized on the policy store
+# created above. No other AWS access is granted.
+# ---------------------------------------------------------------------------
+
+resource "aws_iam_user" "avp_agent" {
+  name = "avp-agent-identity-demo"
+}
+
+resource "aws_iam_policy" "avp_is_authorized" {
+  name        = "avp-agent-identity-IsAuthorized"
+  description = "Allow IsAuthorized calls against the avp-agent-identity policy store only"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "verifiedpermissions:IsAuthorized"
+        Resource = "arn:aws:verifiedpermissions::${data.aws_caller_identity.current.account_id}:policy-store/${aws_verifiedpermissions_policy_store.main.id}"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "avp_agent" {
+  user       = aws_iam_user.avp_agent.name
+  policy_arn = aws_iam_policy.avp_is_authorized.arn
+}
+
+resource "aws_iam_access_key" "avp_agent" {
+  user = aws_iam_user.avp_agent.name
+}
+
+data "aws_caller_identity" "current" {}
+
 output "policy_store_id" {
   description = "Copy this value into AVP_POLICY_STORE_ID in your .env file"
   value       = aws_verifiedpermissions_policy_store.main.id
+}
+
+output "aws_access_key_id" {
+  description = "Copy into BWS as AWS_ACCESS_KEY_ID"
+  value       = aws_iam_access_key.avp_agent.id
+}
+
+output "aws_secret_access_key" {
+  description = "Copy into BWS as AWS_SECRET_ACCESS_KEY"
+  value       = aws_iam_access_key.avp_agent.secret
+  sensitive   = true
 }

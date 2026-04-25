@@ -129,11 +129,19 @@ terraform init
 terraform apply
 ```
 
-Terraform outputs the `policy_store_id`. Copy it. You need it in step 3.
+Terraform creates the policy store, an IAM user with least-privilege access, and an access key. Copy these outputs -- you will need them in step 2:
 
 ```
 Outputs:
-  policy_store_id = "AbCdEf1234567890"
+  policy_store_id       = "AbCdEf1234567890"
+  aws_access_key_id     = "AKIAIOSFODNN7EXAMPLE"
+  aws_secret_access_key = <sensitive>
+```
+
+To retrieve the secret key:
+
+```bash
+terraform output -raw aws_secret_access_key
 ```
 
 ### 2. Create BWS machine accounts
@@ -147,8 +155,8 @@ In the [Bitwarden Secrets Manager console](https://sm.bitwarden.com):
 | Key | Value |
 |---|---|
 | `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `AWS_ACCESS_KEY_ID` | IAM user key with `verifiedpermissions:IsAuthorized` |
-| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
+| `AWS_ACCESS_KEY_ID` | from `terraform output aws_access_key_id` |
+| `AWS_SECRET_ACCESS_KEY` | from `terraform output -raw aws_secret_access_key` |
 | `DB_ORDERS_PASSWORD` | A strong random password you choose |
 | `DB_PAYMENTS_PASSWORD` | A strong random password you choose |
 | `DB_LOGS_PASSWORD` | A strong random password you choose |
