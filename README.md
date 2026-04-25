@@ -2,7 +2,7 @@
 
 A reference architecture demonstrating agent identity as a first-class principal using Amazon Verified Permissions (AVP), Bitwarden Secrets Manager (BWS), and the Claude API.
 
-Built as the companion environment for [Developer Network Segmentation Is Not the Same as Server Segmentation](https://ewright3.com) on [Field Notes](https://ewright3.com).
+Built as the companion environment for [Developer Network Segmentation Is Not the Same as Server Segmentation](https://ewright3.com/blog/developer-network-segmentation?utm_source=github&utm_medium=readme&utm_campaign=developer-network-segmentation) on [Field Notes](https://ewright3.com).
 
 ---
 

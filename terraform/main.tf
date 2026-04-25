@@ -25,30 +25,38 @@ resource "aws_verifiedpermissions_schema" "main" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
 
   definition {
-    value = jsonencode({
-      "AgentIdentity": {
-        "entityTypes": {
-          "Agent": {
-            "shape": {
-              "type": "Record",
-              "attributes": {}
-            }
-          },
-          "User": {
-            "shape": {
-              "type": "Record",
-              "attributes": {
-                "role": { "type": "String", "required": true }
+    value = <<-JSON
+      {
+        "AgentIdentity": {
+          "entityTypes": {
+            "Agent": {
+              "shape": {
+                "type": "Record",
+                "attributes": {}
+              }
+            },
+            "User": {
+              "shape": {
+                "type": "Record",
+                "attributes": {
+                  "role": { "type": "String", "required": true }
+                }
+              }
+            },
+            "DataStore": {
+              "shape": {
+                "type": "Record",
+                "attributes": {}
               }
             }
+          },
+          "actions": {
+            "read":  { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } },
+            "write": { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } }
           }
-        },
-        "actions": {
-          "read":  { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } },
-          "write": { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } }
         }
       }
-    })
+    JSON
   }
 }
 
@@ -134,7 +142,7 @@ resource "aws_verifiedpermissions_policy" "agent_ceiling_payments" {
       description = "Ceiling policy: no agent identity may access payment records regardless of configuration"
       statement   = <<-CEDAR
         forbid(
-          principal in AgentIdentity::Agent::"*",
+          principal is AgentIdentity::Agent,
           action in [AgentIdentity::Action::"read", AgentIdentity::Action::"write"],
           resource == AgentIdentity::DataStore::"payments"
         );
