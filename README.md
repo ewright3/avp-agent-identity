@@ -207,10 +207,11 @@ This file contains no secrets. DB passwords, AWS credentials, and the Anthropic 
 
 ### 4. Start the stack
 
-Install the BWS CLI if you haven't already:
+Install the BWS CLI if you haven't already. Download the binary for your platform from the [BWS releases page](https://github.com/bitwarden/sdk-sm/releases/tag/bws-v2.0.0), then move it to a directory on your PATH:
 
 ```bash
-brew install bitwarden/tools/bws
+mv bws /usr/local/bin/bws
+chmod +x /usr/local/bin/bws
 ```
 
 `bws run` wraps `docker compose up` and injects all BWS secrets as environment variables into the process. Docker Compose passes them into the containers. The passwords are never written to disk.
