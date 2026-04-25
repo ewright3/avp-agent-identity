@@ -321,6 +321,35 @@ This is the control plane. SecOps defines the ceiling. Developers cannot exceed 
 
 ---
 
+### Moment 6: Credential scope isolation
+
+The chatbot agent's BWS machine account token lives in `.env` at project scope. Your personal developer BWS token (`BWS_ACCESS_TOKEN`) lives in `~/.zshrc` at user scope and is set in your shell session before you run `bws run`. It is never written to any file in this project.
+
+Verify the separation is real:
+
+```bash
+# Developer portal process — should NOT see your personal BWS token
+curl http://localhost:8001/debug/env-scope
+```
+
+Expected:
+```json
+{"BWS_ACCESS_TOKEN_visible": false, "note": "PASS: developer token is not visible to this process."}
+```
+
+```bash
+# Chatbot container — confirm the same from inside Docker
+docker exec avp-agent-identity-chatbot-1 env | grep BWS_ACCESS_TOKEN
+```
+
+Expected: no output. The container has no visibility into your shell session.
+
+If either check fails, your personal token has leaked into the process environment. The most common cause: `BWS_ACCESS_TOKEN` was set in `.env` rather than only in your shell profile.
+
+**The honest residual:** this separation is enforced by discipline, not by tooling. Nothing prevents a developer from setting their personal token in `.env`. If they do, the credential isolation collapses silently. AVP still enforces authorization at the policy layer, but the scoping pattern is gone. This is a code review control, not a technical one.
+
+---
+
 ## Credential Scoping Pattern
 
 ```

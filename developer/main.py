@@ -165,6 +165,28 @@ def list_logs(x_elevated: bool = Header(default=False)):
     return [{"id": r[0], "level": r[1], "service": r[2], "message": r[3], "metadata": r[4], "created_at": str(r[5])} for r in rows]
 
 
+@app.get("/debug/env-scope", summary="Show credential scoping (demo use only)")
+def env_scope():
+    """
+    Reports whether the developer-level BWS token is visible to this process.
+
+    BWS_ACCESS_TOKEN is the host developer token, set in ~/.zshrc at user scope.
+    It should NOT be present here — this process only receives the machine account
+    tokens injected via docker compose from .env.
+
+    If it appears, the credential separation has collapsed.
+    """
+    token = os.environ.get("BWS_ACCESS_TOKEN")
+    return {
+        "BWS_ACCESS_TOKEN_visible": token is not None,
+        "note": (
+            "FAIL: developer token is visible to this process. Credential separation has collapsed."
+            if token is not None else
+            "PASS: developer token is not visible to this process."
+        ),
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
