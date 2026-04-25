@@ -51,8 +51,32 @@ resource "aws_verifiedpermissions_schema" "main" {
             }
           },
           "actions": {
-            "read":  { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } },
-            "write": { "appliesTo": { "principalTypes": ["Agent", "User"], "resourceTypes": ["DataStore"] } }
+            "read": {
+              "appliesTo": {
+                "principalTypes": ["Agent", "User"],
+                "resourceTypes": ["DataStore"],
+                "context": {
+                  "type": "Record",
+                  "attributes": {
+                    "elevation_active":    { "type": "Boolean", "required": true },
+                    "session_customer_id": { "type": "String",  "required": false }
+                  }
+                }
+              }
+            },
+            "write": {
+              "appliesTo": {
+                "principalTypes": ["Agent", "User"],
+                "resourceTypes": ["DataStore"],
+                "context": {
+                  "type": "Record",
+                  "attributes": {
+                    "elevation_active":    { "type": "Boolean", "required": true },
+                    "session_customer_id": { "type": "String",  "required": false }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -71,6 +95,7 @@ resource "aws_verifiedpermissions_schema" "main" {
 
 resource "aws_verifiedpermissions_policy" "chatbot_orders_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -90,6 +115,7 @@ resource "aws_verifiedpermissions_policy" "chatbot_orders_read" {
 # Explicit deny: chatbot cannot access payments under any circumstance
 resource "aws_verifiedpermissions_policy" "chatbot_payments_deny" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -108,6 +134,7 @@ resource "aws_verifiedpermissions_policy" "chatbot_payments_deny" {
 # Explicit deny: chatbot cannot access system logs
 resource "aws_verifiedpermissions_policy" "chatbot_logs_deny" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -136,6 +163,7 @@ resource "aws_verifiedpermissions_policy" "chatbot_logs_deny" {
 
 resource "aws_verifiedpermissions_policy" "agent_ceiling_payments" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -158,6 +186,7 @@ resource "aws_verifiedpermissions_policy" "agent_ceiling_payments" {
 
 resource "aws_verifiedpermissions_policy" "developer_orders_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -175,6 +204,7 @@ resource "aws_verifiedpermissions_policy" "developer_orders_read" {
 
 resource "aws_verifiedpermissions_policy" "developer_logs_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -198,6 +228,7 @@ resource "aws_verifiedpermissions_policy" "developer_logs_read" {
 
 resource "aws_verifiedpermissions_policy" "developer_orders_write_elevated" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
@@ -216,6 +247,7 @@ resource "aws_verifiedpermissions_policy" "developer_orders_write_elevated" {
 
 resource "aws_verifiedpermissions_policy" "developer_payments_elevated" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
+  depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
