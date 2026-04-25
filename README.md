@@ -175,12 +175,14 @@ Fill in all values:
 ```env
 CHATBOT_BWS_TOKEN=      # chatbot-support machine account token (UUID from BWS)
 DEVELOPER_BWS_TOKEN=    # developer-portal machine account token (UUID from BWS)
-BWS_ORGANIZATION_ID=    # from Bitwarden Settings > Organization ID (UUID)
+BWS_ORGANIZATION_ID=    # see note below
 AVP_POLICY_STORE_ID=    # output from terraform apply
 AWS_REGION=us-east-1
 ```
 
 This file contains no secrets. DB passwords, AWS credentials, and the Anthropic API key all live in BWS and are injected at startup by `bws run` in the next step.
+
+> **Finding your Organization ID:** Look at the URL when you are anywhere in your Bitwarden organization (Secrets Manager or Admin Console). The UUID in the URL is your Organization ID.
 
 > **Token clarity:** `CHATBOT_BWS_TOKEN` and `DEVELOPER_BWS_TOKEN` are machine account tokens for the services running inside Docker. Your personal `BWS_ACCESS_TOKEN` is a separate credential used on the host to run `bws run`. It belongs in `~/.zshrc`, not here. Do not commit `.env` to version control.
 
