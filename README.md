@@ -471,7 +471,9 @@ Expected:
 
 Same container. Different process environment. The isolation is enforced by `entrypoint.sh` using `env -u SECURITY_ENGINEER_BWS_TOKEN` before launching the agent process.
 
-**The honest residual:** this separation is a code discipline control, not a technical guarantee. A developer who removes the `env -u` line in `entrypoint.sh` collapses the isolation silently. AVP still enforces authorization at the policy layer — the Cedar ceiling still holds — but the credential scoping is gone. This is a code review requirement, not an enforcement mechanism.
+**Runtime enforcement:** the KB agent checks at startup that `SECURITY_ENGINEER_BWS_TOKEN` is not in its environment. If it is, the process refuses to start with a fatal error. To test this, remove the `env -u SECURITY_ENGINEER_BWS_TOKEN` line from `entrypoint.sh` and rebuild. The KB agent will fail immediately on startup rather than silently inheriting the engineer's credential.
+
+**The honest residual:** the startup check converts a silent failure into a loud one, but it does not prevent the misconfiguration. A developer who removes both the `env -u` line and the startup check collapses the isolation with no warning. The Cedar ceiling still holds at the AVP layer regardless — the agent cannot access `incidents_sensitive` — but the engineer's credential is now visible to the agent process. True enforcement requires a credential delivery model where each process fetches its own secrets via its own identity and the other's credential is never in the shared environment to begin with.
 
 ---
 

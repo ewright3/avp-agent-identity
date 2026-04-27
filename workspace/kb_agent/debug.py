@@ -9,6 +9,13 @@ between the KB agent and the engineer portal from inside the same container.
 import os
 from fastapi import FastAPI
 
+if os.environ.get("SECURITY_ENGINEER_BWS_TOKEN"):
+    raise RuntimeError(
+        "FATAL: SECURITY_ENGINEER_BWS_TOKEN is visible to the KB agent process. "
+        "Credential separation has failed. "
+        "Check entrypoint.sh — SECURITY_ENGINEER_BWS_TOKEN must be unset before launching this process."
+    )
+
 app = FastAPI(title="KB Agent Debug")
 
 
