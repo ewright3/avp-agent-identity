@@ -425,6 +425,8 @@ curl -s http://localhost:8001/incidents/1 -H "X-Elevated: true" | python3 -m jso
 
 The engineer portal calls `IsAuthorized` for `read` on `incidents_sensitive` with `elevation_active: true`. Cedar permits it. The full record is returned including affected customers, internal notes, remediation details, and postmortem URL.
 
+> **Demo note:** `X-Elevated: true` is a request header used here for simplicity. In production, elevation would be the result of an authentication and authorization flow — a JIT access request, an approval, a time-bound session token. The Cedar policy condition would evaluate that context, not a header the caller sets themselves.
+
 Now ask the KB agent the same question one final time at http://localhost:8000:
 
 > "What are the affected customers for incident 1?"
