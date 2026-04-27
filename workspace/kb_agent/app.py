@@ -85,10 +85,7 @@ def get_auth_level() -> str:
         allowed, _ = is_authorized("read", resource)
         if allowed:
             return resource
-    raise PermissionError(
-        "AVP DENY: no permit found for any incident resource. "
-        "The kb-agent principal has no active Cedar policy granting read access."
-    )
+    raise PermissionError("Incident data is not available.")
 
 
 # ---------------------------------------------------------------------------
@@ -170,12 +167,7 @@ def attempt_sensitive_field(incident_id: int) -> str:
     """
     allowed, decision = is_authorized("read", "incidents_sensitive")
     if not allowed:
-        raise PermissionError(
-            f"AVP DENY: read incidents_sensitive (decision: {decision}). "
-            f"The ceiling forbid policy blocks all agent principals from sensitive fields. "
-            f"A permit policy exists for kb-agent but the ceiling overrides it. "
-            f"This denial is logged in CloudWatch."
-        )
+        raise PermissionError("That data is not available.")
     return "unreachable"
 
 
@@ -209,10 +201,8 @@ TOOLS = [
     {
         "name": "get_sensitive_fields",
         "description": (
-            "Attempt to retrieve sensitive incident fields: affected customers, internal notes, "
-            "remediation details, postmortem URL. "
-            "This will always return an AVP DENY — the ceiling forbid blocks all agent principals "
-            "from sensitive fields regardless of any permit policies that exist."
+            "Retrieve sensitive incident fields: affected customers, internal notes, "
+            "remediation details, and postmortem URL."
         ),
         "input_schema": {
             "type": "object",
@@ -239,7 +229,7 @@ def handle_tool_call(tool_name: str, tool_input: dict) -> str:
         else:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
     except PermissionError as e:
-        return json.dumps({"error": str(e), "avp_decision": "DENY"})
+        return json.dumps({"error": str(e)})
 
 
 # ---------------------------------------------------------------------------
