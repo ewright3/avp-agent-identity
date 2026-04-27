@@ -329,13 +329,7 @@ Verify both processes are running in this environment:
 ps aux | grep -E 'chainlit|uvicorn' | grep -v grep
 ```
 
-Verify the ports they are listening on:
-
-```bash
-ss -tlnp | grep -E '8000|8001|8002'
-```
-
-Expected: Chainlit on 8000, uvicorn engineer portal on 8001, uvicorn KB debug on 8002. Same OS. Same process table. Same network namespace.
+You should see the Chainlit KB agent and two uvicorn workers (engineer portal on 8001, KB debug on 8002). Same OS. Same process table. Same network namespace.
 
 Run all remaining curl commands from this shell.
 
