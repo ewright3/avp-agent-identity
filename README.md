@@ -311,10 +311,16 @@ The agent calls `get_sensitive_details`. The handler calls `IsAuthorized` for `r
 
 ### Moment 2: Engineer queries incidents without elevation
 
-Run all curl commands from inside the workspace container so the request originates from the same OS both processes are running on:
+First, open an interactive shell inside the workspace container. This puts you in the security engineer's environment — the same OS both processes are running on:
 
 ```bash
-docker exec -it avp-agent-identity-workspace-1 curl -s http://localhost:8001/incidents | python3 -m json.tool
+docker exec -it avp-agent-identity-workspace-1 bash
+```
+
+Run all remaining curl commands from this shell.
+
+```bash
+curl -s http://localhost:8001/incidents | python3 -m json.tool
 ```
 
 The engineer portal calls `IsAuthorized` for `read` on `incidents` with `elevation_active: false`. Cedar permits it. The response contains the same public fields the KB agent sees: title, severity, status, created_at. No sensitive fields.
@@ -326,7 +332,7 @@ Same table. Same data. Same view as the agent — because the standard engineer 
 ### Moment 3: Engineer elevates and gets the full record
 
 ```bash
-docker exec -it avp-agent-identity-workspace-1 curl -s http://localhost:8001/incidents -H "X-Elevated: true" | python3 -m json.tool
+curl -s http://localhost:8001/incidents -H "X-Elevated: true" | python3 -m json.tool
 ```
 
 The portal calls `IsAuthorized` for `read` on `incidents_sensitive` with `elevation_active: true`. Cedar evaluates the JIT policy and returns `ALLOW`. The full incident record is returned: affected customers, internal notes, remediation details, postmortem URL.
@@ -364,7 +370,7 @@ Both the KB agent and the engineer portal are running inside the same container 
 **Engineer portal** (inherits full container env, including `SECURITY_ENGINEER_BWS_TOKEN`):
 
 ```bash
-docker exec -it avp-agent-identity-workspace-1 curl -s http://localhost:8001/debug/env-scope | python3 -m json.tool
+curl -s http://localhost:8001/debug/env-scope | python3 -m json.tool
 ```
 
 Expected:
@@ -379,7 +385,7 @@ Expected:
 **KB agent process** (`SECURITY_ENGINEER_BWS_TOKEN` stripped at launch by entrypoint.sh):
 
 ```bash
-docker exec -it avp-agent-identity-workspace-1 curl -s http://localhost:8002/debug/env-scope | python3 -m json.tool
+curl -s http://localhost:8002/debug/env-scope | python3 -m json.tool
 ```
 
 Expected:
