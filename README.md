@@ -326,25 +326,16 @@ docker exec -it avp-agent-identity-workspace-1 bash
 Verify both processes are running in this environment:
 
 ```bash
-cat /proc/*/cmdline 2>/dev/null | tr '\0' '\n' | grep -E 'chainlit|uvicorn'
+ps aux | grep -E 'chainlit|uvicorn' | grep -v grep
 ```
-
-Expected: three lines — Chainlit KB agent and two uvicorn workers (engineer portal + KB debug server).
 
 Verify the ports they are listening on:
 
 ```bash
-cat /proc/net/tcp | awk 'NR>1 {print $2}' | cut -d: -f2 | while read hex; do printf "%d\n" "0x$hex"; done | sort -un | grep -E '^(8000|8001|8002)$'
+ss -tlnp | grep -E '8000|8001|8002'
 ```
 
-Expected:
-```
-8000
-8001
-8002
-```
-
-Same OS. Same process table. Same network namespace.
+Expected: Chainlit on 8000, uvicorn engineer portal on 8001, uvicorn KB debug on 8002. Same OS. Same process table. Same network namespace.
 
 Run all remaining curl commands from this shell.
 
