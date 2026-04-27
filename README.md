@@ -323,6 +323,14 @@ Open a terminal on the host and exec into the workspace container. This puts you
 docker exec -it avp-agent-identity-workspace-1 bash
 ```
 
+Verify both processes are running in this environment:
+
+```bash
+ps aux | grep -E 'chainlit|uvicorn'
+```
+
+You should see two processes: the Chainlit KB agent and the uvicorn engineer portal. Same OS. Same process table.
+
 Run all remaining curl commands from this shell.
 
 ---
