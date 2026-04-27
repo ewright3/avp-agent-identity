@@ -200,8 +200,12 @@ resource "aws_iam_policy" "avp_is_authorized" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = "verifiedpermissions:IsAuthorized"
+        Effect = "Allow"
+        Action = [
+          "verifiedpermissions:IsAuthorized",
+          "verifiedpermissions:CreatePolicy",
+          "verifiedpermissions:ListPolicies"
+        ]
         Resource = "arn:aws:verifiedpermissions::${data.aws_caller_identity.current.account_id}:policy-store/${aws_verifiedpermissions_policy_store.main.id}"
       }
     ]

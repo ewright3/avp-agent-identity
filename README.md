@@ -351,7 +351,7 @@ The engineer can see dates. The KB agent cannot — yet.
 
 The engineer recognizes the KB agent needs `created_at`. They use the AWS CLI to add a permit policy directly in AVP — no Terraform, no application code change.
 
-From your **host terminal** (where your AWS credentials are configured):
+From the container shell:
 
 ```bash
 aws verifiedpermissions create-policy \
@@ -379,7 +379,7 @@ The agent now returns dates. The Cedar policy was updated at runtime. No restart
 
 The engineer notices affected customers are still missing. They try the same approach: add a permit for `incidents_sensitive`.
 
-From your **host terminal**:
+From the container shell:
 
 ```bash
 aws verifiedpermissions create-policy \
