@@ -35,7 +35,7 @@ INSERT INTO incidents (title, severity, status, created_at, affected_customers, 
 (
     'S3 bucket misconfiguration — data exports',
     'critical',
-    'contained',
+    'investigating',
     NOW() - INTERVAL '2 days',
     'Export bucket exposed: ~8,400 customer records including PII (name, email, last-four). Customer IDs 9000–17400 range. Regulatory notification required in 22 hours.',
     'Bucket policy was modified during infrastructure migration on 2026-04-22 by automated Terraform run. Public access block was inadvertently disabled. Discovered via external researcher disclosure (responsible disclosure, no evidence of exfiltration).',

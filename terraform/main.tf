@@ -78,42 +78,30 @@ resource "aws_verifiedpermissions_schema" "main" {
 # ---------------------------------------------------------------------------
 # KB agent policies
 #
-# The KB agent can read public incident fields (resource: incidents).
-# It is explicitly forbidden from sensitive fields (resource: incidents_sensitive).
-# The ceiling forbid at the bottom of this file enforces this regardless of
-# any permit policy a developer might try to add.
+# Three resource tiers control what the KB agent can see:
+#
+#   incidents_basic     — title, severity, status only (no dates)
+#   incidents_public    — adds created_at (engineer can grant via AWS CLI)
+#   incidents_sensitive — adds sensitive fields (ceiling forbid blocks all agents)
+#
+# The KB agent starts with a permit for incidents_basic only.
+# A security engineer can grant incidents_public via AWS CLI and the agent
+# will immediately see dates. The ceiling forbid means no one can grant
+# incidents_sensitive to any agent principal, regardless of what they try.
 # ---------------------------------------------------------------------------
 
-resource "aws_verifiedpermissions_policy" "kb_agent_incidents_read" {
+resource "aws_verifiedpermissions_policy" "kb_agent_incidents_basic_read" {
   policy_store_id = aws_verifiedpermissions_policy_store.main.id
   depends_on      = [aws_verifiedpermissions_schema.main]
 
   definition {
     static {
-      description = "KB agent: read public incident fields (title, severity, status, created_at)"
+      description = "KB agent: read basic incident fields (title, severity, status — no dates)"
       statement   = <<-CEDAR
         permit(
           principal == AgentIdentity::Agent::"kb-agent",
           action == AgentIdentity::Action::"read",
-          resource == AgentIdentity::DataStore::"incidents"
-        );
-      CEDAR
-    }
-  }
-}
-
-resource "aws_verifiedpermissions_policy" "kb_agent_incidents_sensitive_deny" {
-  policy_store_id = aws_verifiedpermissions_policy_store.main.id
-  depends_on      = [aws_verifiedpermissions_schema.main]
-
-  definition {
-    static {
-      description = "KB agent: explicitly forbidden from sensitive incident fields"
-      statement   = <<-CEDAR
-        forbid(
-          principal == AgentIdentity::Agent::"kb-agent",
-          action == AgentIdentity::Action::"read",
-          resource == AgentIdentity::DataStore::"incidents_sensitive"
+          resource == AgentIdentity::DataStore::"incidents_basic"
         );
       CEDAR
     }
@@ -163,12 +151,12 @@ resource "aws_verifiedpermissions_policy" "engineer_incidents_read" {
 
   definition {
     static {
-      description = "Security engineer (standard): read public incident fields"
+      description = "Security engineer (standard): read incidents with dates (incidents_public)"
       statement   = <<-CEDAR
         permit(
           principal == AgentIdentity::User::"security-engineer",
           action == AgentIdentity::Action::"read",
-          resource == AgentIdentity::DataStore::"incidents"
+          resource == AgentIdentity::DataStore::"incidents_public"
         );
       CEDAR
     }

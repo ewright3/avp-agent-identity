@@ -90,7 +90,7 @@ def list_incidents(x_elevated: bool = Header(default=False)):
         if not allowed:
             raise HTTPException(
                 status_code=403,
-                detail=f"AVP DENY: {decision}. Sensitive fields require elevation."
+                detail=f"AVP DENY: {decision}. Sensitive fields require elevation. Pass X-Elevated: true."
             )
         conn = get_db()
         with conn.cursor() as cur:
@@ -110,7 +110,7 @@ def list_incidents(x_elevated: bool = Header(default=False)):
             for r in rows
         ]
     else:
-        allowed, decision = is_authorized("read", "incidents", elevation_active=False)
+        allowed, decision = is_authorized("read", "incidents_public", elevation_active=False)
         if not allowed:
             raise HTTPException(status_code=403, detail=f"AVP DENY: {decision}")
         conn = get_db()
@@ -153,7 +153,7 @@ def get_incident(incident_id: int, x_elevated: bool = Header(default=False)):
             "internal_notes": row[6], "remediation_details": row[7], "postmortem_url": row[8],
         }
     else:
-        allowed, decision = is_authorized("read", "incidents", elevation_active=False)
+        allowed, decision = is_authorized("read", "incidents_public", elevation_active=False)
         if not allowed:
             raise HTTPException(status_code=403, detail=f"AVP DENY: {decision}")
         conn = get_db()

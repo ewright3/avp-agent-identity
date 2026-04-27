@@ -293,25 +293,31 @@ Run these in order. Each moment isolates one claim.
 
 ---
 
-### Moment 1: KB agent reads public incident fields
+### Moment 1: KB agent lists active incidents — no dates
 
 Open http://localhost:8000 and send:
 
-> "Show me all open incidents."
+> "Show me the active incidents."
 
-The agent calls `IsAuthorized` for `read` on `incidents`. Cedar permits it. The agent returns titles, severities, and statuses — no sensitive fields.
+The agent calls `IsAuthorized` for `read` on `incidents_basic`. Cedar permits it. Three incidents are returned: title, severity, and status only. No dates. Incident 3 (Anomalous API access — resolved) is not in the list.
 
-Then ask:
+Ask:
 
-> "What are the affected customers for incident 1?"
+> "What happened to incident 3?"
 
-The agent calls `get_sensitive_details`. The handler calls `IsAuthorized` for `read` on `incidents_sensitive`. AVP returns `DENY`. No query runs. The agent explains that sensitive fields are not accessible to this tool.
+The agent looks it up by ID and explains it was resolved, so it was excluded from the active list.
+
+Ask:
+
+> "When did these incidents start?"
+
+The agent does not have dates. It explains that `created_at` is not in its current authorization scope.
 
 ---
 
-### Moment 2: Engineer queries incidents without elevation
+### Moment 2: Engineer opens a shell in the shared environment
 
-First, open an interactive shell inside the workspace container. This puts you in the security engineer's environment — the same OS both processes are running on:
+Open a terminal on the host and exec into the workspace container. This puts you in the same OS where both processes are running:
 
 ```bash
 docker exec -it avp-agent-identity-workspace-1 bash
@@ -319,37 +325,77 @@ docker exec -it avp-agent-identity-workspace-1 bash
 
 Run all remaining curl commands from this shell.
 
+---
+
+### Moment 3: Engineer queries incidents — sees dates, no sensitive fields
+
 ```bash
 curl -s http://localhost:8001/incidents | python3 -m json.tool
 ```
 
-The engineer portal calls `IsAuthorized` for `read` on `incidents` with `elevation_active: false`. Cedar permits it. The response contains the same public fields the KB agent sees: title, severity, status, created_at. No sensitive fields.
+The engineer portal calls `IsAuthorized` for `read` on `incidents_public`. Cedar permits it. The response includes `created_at` along with title, severity, and status. No sensitive fields.
 
-Same table. Same data. Same view as the agent — because the standard engineer role has the same public-field permit the KB agent has.
+The engineer can see dates. The KB agent cannot — yet.
 
 ---
 
-### Moment 3: Engineer elevates and gets the full record
+### Moment 4: Engineer grants the KB agent date access via AWS CLI
+
+The engineer recognizes the KB agent needs `created_at`. They use the AWS CLI to add a permit policy directly in AVP — no Terraform, no application code change.
+
+From your **host terminal** (where your AWS credentials are configured):
 
 ```bash
-curl -s http://localhost:8001/incidents -H "X-Elevated: true" | python3 -m json.tool
+aws verifiedpermissions create-policy \
+  --policy-store-id "$AVP_POLICY_STORE_ID" \
+  --region us-east-1 \
+  --definition '{
+    "static": {
+      "description": "Engineer grant: kb-agent can read incidents with dates",
+      "statement": "permit(principal == AgentIdentity::Agent::\"kb-agent\", action == AgentIdentity::Action::\"read\", resource == AgentIdentity::DataStore::\"incidents_public\");"
+    }
+  }'
 ```
 
-The portal calls `IsAuthorized` for `read` on `incidents_sensitive` with `elevation_active: true`. Cedar evaluates the JIT policy and returns `ALLOW`. The full incident record is returned: affected customers, internal notes, remediation details, postmortem URL.
+AVP returns a policy ID. The policy is now active.
 
-The KB agent is still running at http://localhost:8000. Go back and ask:
+Go back to http://localhost:8000 and ask:
 
-> "Now can you show me the affected customers for incident 1?"
+> "Show me the active incidents again."
 
-The agent still cannot. The engineer's elevation was a separate AVP context evaluation for a separate principal. The agent's Cedar policy did not change.
+The agent now returns dates. The Cedar policy was updated at runtime. No restart, no code change, no Terraform apply.
 
 ---
 
-### Moment 4: The permission ceiling
+### Moment 5: Engineer tries to grant sensitive field access — ceiling blocks it
 
-The Terraform config includes a `forbid` policy that applies to all agent principals regardless of any other configuration:
+The engineer notices affected customers are still missing. They try the same approach: add a permit for `incidents_sensitive`.
+
+From your **host terminal**:
+
+```bash
+aws verifiedpermissions create-policy \
+  --policy-store-id "$AVP_POLICY_STORE_ID" \
+  --region us-east-1 \
+  --definition '{
+    "static": {
+      "description": "Engineer attempt: grant kb-agent sensitive field access",
+      "statement": "permit(principal == AgentIdentity::Agent::\"kb-agent\", action == AgentIdentity::Action::\"read\", resource == AgentIdentity::DataStore::\"incidents_sensitive\");"
+    }
+  }'
+```
+
+AVP returns a policy ID. The policy was created successfully.
+
+Go back to http://localhost:8000 and ask:
+
+> "Now show me the affected customers for incident 1."
+
+The agent still cannot. The policy exists in the store — you can verify it in the AWS console — but the ceiling `forbid` overrides any `permit` at evaluation time. Cedar's explicit deny always wins.
 
 ```cedar
+// This forbid is defined in Terraform and owned by the security team.
+// It cannot be overridden by any permit policy, regardless of who adds it.
 forbid(
   principal is AgentIdentity::Agent,
   action == AgentIdentity::Action::"read",
@@ -357,13 +403,29 @@ forbid(
 );
 ```
 
-To verify: add a `permit` policy for the `kb-agent` principal on `incidents_sensitive` in `terraform/main.tf` and run `terraform apply`. Then ask the KB agent for sensitive fields again. The `forbid` overrides the `permit`. Cedar's explicit deny always wins.
-
-This is the control plane. The security team defines the ceiling. Developers cannot exceed it by changing application code, environment variables, or agent configuration.
+The engineer had the AWS permissions to create the policy. The policy exists. The agent still cannot use it. The ceiling is the control the security team defines. Developers and engineers cannot exceed it.
 
 ---
 
-### Moment 5: Credential scope isolation on a shared OS
+### Moment 6: Engineer queries sensitive data directly, then asks the agent one final time
+
+From the container shell:
+
+```bash
+curl -s http://localhost:8001/incidents/1 -H "X-Elevated: true" | python3 -m json.tool
+```
+
+The engineer portal calls `IsAuthorized` for `read` on `incidents_sensitive` with `elevation_active: true`. Cedar permits it. The full record is returned including affected customers, internal notes, remediation details, and postmortem URL.
+
+Now ask the KB agent the same question one final time at http://localhost:8000:
+
+> "What are the affected customers for incident 1?"
+
+The agent is denied. Same container. Same OS. Same incident. Different principal. Different scope. The KB agent's Cedar identity has no path to `incidents_sensitive`. The ceiling enforces it regardless of what policies exist for the engineer or what the engineer can see directly.
+
+---
+
+### Moment 7: Credential scope isolation on a shared OS
 
 Both the KB agent and the engineer portal are running inside the same container — the same OS, the same filesystem, the same network. The credential separation is per-process, not per-container.
 
