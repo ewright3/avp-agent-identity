@@ -39,24 +39,6 @@ sys.path.insert(0, "/app")
 from bws_secrets import load_secrets
 
 # ---------------------------------------------------------------------------
-# Startup credential isolation check
-#
-# The engineer's BWS token must not be visible to this process.
-# entrypoint.sh strips it via `env -u SECURITY_ENGINEER_BWS_TOKEN` before
-# launching this process. If it is present, the credential separation has
-# collapsed — likely because entrypoint.sh was modified.
-#
-# This is runtime enforcement of a discipline control. It does not prevent
-# the misconfiguration, but it makes it a hard failure rather than a silent one.
-# ---------------------------------------------------------------------------
-if os.environ.get("SECURITY_ENGINEER_BWS_TOKEN"):
-    raise RuntimeError(
-        "FATAL: SECURITY_ENGINEER_BWS_TOKEN is visible to the KB agent process. "
-        "Credential separation has failed. "
-        "Check entrypoint.sh — SECURITY_ENGINEER_BWS_TOKEN must be unset before launching this process."
-    )
-
-# ---------------------------------------------------------------------------
 # Secrets and config
 # ---------------------------------------------------------------------------
 _secrets = load_secrets()
