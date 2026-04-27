@@ -326,10 +326,10 @@ docker exec -it avp-agent-identity-workspace-1 bash
 Verify both processes are running in this environment:
 
 ```bash
-ps aux | grep -E 'chainlit|uvicorn'
+cat /proc/*/cmdline 2>/dev/null | tr '\0' '\n' | grep -E 'chainlit|uvicorn'
 ```
 
-You should see two processes: the Chainlit KB agent and the uvicorn engineer portal. Same OS. Same process table.
+You should see three lines: the Chainlit KB agent and two uvicorn workers (engineer portal + KB debug server). Same OS. Same process table.
 
 Run all remaining curl commands from this shell.
 
