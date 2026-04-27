@@ -222,7 +222,7 @@ terraform output -raw aws_secret_access_key
 
 ### 2. Configure Bitwarden Secrets Manager
 
-In the [Bitwarden Secrets Manager console](https://sm.bitwarden.com):
+In the [Bitwarden Secrets Manager console](https://vault.bitwarden.com/#/login):
 
 **Create a project** named `avp-agent-identity`.
 
