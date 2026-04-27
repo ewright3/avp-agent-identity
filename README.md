@@ -329,7 +329,22 @@ Verify both processes are running in this environment:
 cat /proc/*/cmdline 2>/dev/null | tr '\0' '\n' | grep -E 'chainlit|uvicorn'
 ```
 
-You should see three lines: the Chainlit KB agent and two uvicorn workers (engineer portal + KB debug server). Same OS. Same process table.
+Expected: three lines — Chainlit KB agent and two uvicorn workers (engineer portal + KB debug server).
+
+Verify the ports they are listening on:
+
+```bash
+cat /proc/net/tcp | awk 'NR>1 {print $2}' | cut -d: -f2 | while read hex; do printf "%d\n" "0x$hex"; done | sort -un | grep -E '^(8000|8001|8002)$'
+```
+
+Expected:
+```
+8000
+8001
+8002
+```
+
+Same OS. Same process table. Same network namespace.
 
 Run all remaining curl commands from this shell.
 
