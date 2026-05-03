@@ -289,11 +289,11 @@ Services:
 
 ## Demo Walkthrough
 
-Run these in order. Each moment isolates one claim.
+Run these in order. Each test case isolates one claim.
 
 ---
 
-### Moment 1: KB agent lists active incidents — no dates
+### TC-01: KB agent lists active incidents — no dates
 
 Open http://localhost:8000 and send:
 
@@ -315,7 +315,7 @@ The agent does not have dates. It explains that `created_at` is not in its curre
 
 ---
 
-### Moment 2: Engineer opens a shell in the shared environment
+### TC-02: Engineer opens a shell in the shared environment
 
 Open a terminal on the host and exec into the workspace container. This puts you in the same OS where both processes are running:
 
@@ -335,7 +335,7 @@ Run all remaining curl commands from this shell.
 
 ---
 
-### Moment 3: Engineer queries incidents — sees dates, no sensitive fields
+### TC-03: Engineer queries incidents — sees dates, no sensitive fields
 
 ```bash
 curl -s http://localhost:8001/incidents | python3 -m json.tool
@@ -347,7 +347,7 @@ The engineer can see dates. The KB agent cannot — yet.
 
 ---
 
-### Moment 4: Engineer grants the KB agent date access via AWS CLI
+### TC-04: Engineer grants the KB agent date access via AWS CLI
 
 The engineer recognizes the KB agent needs `created_at`. They use the AWS CLI to add a permit policy directly in AVP — no Terraform, no application code change.
 
@@ -375,7 +375,7 @@ The agent now returns dates. The Cedar policy was updated at runtime. No restart
 
 ---
 
-### Moment 5: Engineer tries to grant sensitive field access — ceiling blocks it
+### TC-05: Engineer tries to grant sensitive field access — ceiling blocks it
 
 The engineer notices affected customers are still missing. They try the same approach: add a permit for `incidents_sensitive`.
 
@@ -415,7 +415,7 @@ The engineer had the AWS permissions to create the policy. The policy exists. Th
 
 ---
 
-### Moment 6: Engineer queries sensitive data directly, then asks the agent one final time
+### TC-06: Engineer queries sensitive data directly, then asks the agent one final time
 
 From the container shell:
 
@@ -435,7 +435,7 @@ The agent is denied. Same container. Same OS. Same incident. Different principal
 
 ---
 
-### Moment 7: Credential scope isolation on a shared OS
+### TC-07: Credential scope isolation on a shared OS
 
 Both the KB agent and the engineer portal are running inside the same container — the same OS, the same filesystem, the same network. The credential separation is per-process, not per-container.
 
